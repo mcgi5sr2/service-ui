@@ -1,4 +1,5 @@
 import type { Component } from 'vue'
+import { NAME_RE } from '../patterns'
 import { CONTRACT, type RemoteModule } from './types'
 
 /** What the shell knows about a service from `GET /registry`. */
@@ -12,7 +13,7 @@ export interface RemoteService {
   build: string
 }
 
-const NAME_RE = /^[a-z0-9][a-z0-9-]*$/
+// Relative path segments that can't start with '.', so no dot segments either.
 const ENTRY_RE = /^[A-Za-z0-9_-][A-Za-z0-9._-]*(?:\/[A-Za-z0-9_-][A-Za-z0-9._-]*)*$/
 
 // One import per service build, shared by every route and slot that needs it.
@@ -32,9 +33,10 @@ export function setImporterForTests(fn: typeof importer): void {
  */
 function entryUrl(svc: RemoteService): string {
   const ui = `/svc/${svc.name}/ui/`
-  if (!NAME_RE.test(svc.name) || svc.ui !== ui || !ENTRY_RE.test(svc.entry) || /(^|\/)\.\.?(\/|$)/.test(svc.entry)) {
+  if (!NAME_RE.test(svc.name) || svc.ui !== ui || !ENTRY_RE.test(svc.entry)) {
     throw new Error(`service-ui: refusing to load "${svc.name}" from "${svc.ui}${svc.entry}"`)
   }
+  // Belt and braces: what the URL parser makes of it must still be ours.
   const url = new URL(ui + svc.entry, window.location.origin)
   if (url.origin !== window.location.origin || !url.pathname.startsWith(ui)) {
     throw new Error(`service-ui: refusing to load "${svc.name}" from "${url.href}"`)

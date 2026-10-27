@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:service-ui:manifest:v1",
+  "title": "Service UI manifest, contract 1",
+  "description": "GET /ui/manifest.json. Unknown properties are allowed so additive fields don't break older readers; readers must ignore them and not pass them on. Checks a schema can't express (every route path and launcher target under its tool's base, base unique fleet-wide) are the reader's job. Patterns avoid lookarounds so non-ECMAScript regex engines accept them.",
+  "type": "object",
+  "required": ["contract", "service", "version", "build", "remote", "tools"],
+  "properties": {
+    "contract": { "const": 1 },
+    "service": { "$ref": "#/$defs/name" },
+    "version": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "build": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,64}$" },
+    "remote": {
+      "type": "object",
+      "required": ["entry", "shared"],
+      "properties": {
+        "entry": {
+          "description": "Relative to /ui/: no scheme, no leading slash, no dot segments.",
+          "type": "string",
+          "maxLength": 200,
+          "pattern": "^[A-Za-z0-9_-][A-Za-z0-9._-]*(/[A-Za-z0-9_-][A-Za-z0-9._-]*)*$"
+        },
+        "shared": {
+          "type": "object",
+          "maxProperties": 16,
+          "propertyNames": { "pattern": "^(@[a-z0-9-]+/)?[a-z0-9][a-z0-9._-]*$", "maxLength": 100 },
+          "additionalProperties": { "type": "string", "minLength": 1, "maxLength": 64 }
+        }
+      }
+    },
+    "tools": { "type": "array", "maxItems": 32, "items": { "$ref": "#/$defs/tool" } },
+    "slots": {
+      "type": "object",
+      "properties": {
+        "provides": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "required": ["slot", "expose", "props"],
+            "properties": {
+              "slot": { "$ref": "#/$defs/slot" },
+              "expose": { "$ref": "#/$defs/expose" },
+              "props": { "$ref": "#/$defs/propsVersion" }
+            }
+          }
+        },
+        "hosts": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "required": ["slot", "props"],
+            "properties": {
+              "slot": { "$ref": "#/$defs/slot" },
+              "props": { "$ref": "#/$defs/propsVersion" }
+            }
+          }
+        }
+      }
+    },
+    "requires": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "required": ["service", "contract"],
+        "properties": {
+          "service": { "$ref": "#/$defs/name" },
+          "contract": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    "feedback": {
+      "type": "object",
+      "required": ["repo"],
+      "properties": {
+        "repo": {
+          "description": "owner/repo; neither part may start with a dot, so no . or .. segments.",
+          "type": "string",
+          "maxLength": 200,
+          "pattern": "^[A-Za-z0-9_-][A-Za-z0-9_.-]*/[A-Za-z0-9_-][A-Za-z0-9_.-]*$"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "name": { "type": "string", "maxLength": 63, "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "slot": { "type": "string", "maxLength": 100, "pattern": "^[a-z0-9-]+\\.[a-z0-9-]+$" },
+    "expose": { "type": "string", "maxLength": 100, "pattern": "^\\./[A-Za-z0-9_-]+(/[A-Za-z0-9_-]+)*$" },
+    "icon": { "type": "string", "maxLength": 64, "pattern": "^pi-[a-z0-9-]+$" },
+    "base": { "type": "string", "maxLength": 200, "pattern": "^(/[a-z0-9][a-z0-9-]*)+$" },
+    "propsVersion": { "type": "integer", "minimum": 1 },
+    "text": { "type": "string", "maxLength": 300 },
+    "tool": {
+      "type": "object",
+      "required": ["id", "label", "description", "icon", "base", "listed", "routes"],
+      "properties": {
+        "id": { "$ref": "#/$defs/name" },
+        "label": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "description": { "$ref": "#/$defs/text" },
+        "icon": { "$ref": "#/$defs/icon" },
+        "base": { "$ref": "#/$defs/base" },
+        "listed": { "enum": ["everyone", "signed-in"] },
+        "routes": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "required": ["path", "title", "expose", "auth"],
+            "properties": {
+              "path": {
+                "description": "Relative to the tool's base: '' or segments that are names or :params.",
+                "type": "string",
+                "maxLength": 200,
+                "pattern": "^((:[A-Za-z_][A-Za-z0-9_]*|[A-Za-z0-9_-][A-Za-z0-9_.-]*)(/(:[A-Za-z_][A-Za-z0-9_]*|[A-Za-z0-9_-][A-Za-z0-9_.-]*))*)?$"
+              },
+              "title": { "type": "string", "minLength": 1, "maxLength": 80 },
+              "expose": { "$ref": "#/$defs/expose" },
+              "auth": { "enum": ["none", "required"] },
+              "fullBleed": { "type": "boolean" }
+            }
+          }
+        },
+        "launcher": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "required": ["label", "icon", "to", "section", "order"],
+            "properties": {
+              "label": { "type": "string", "minLength": 1, "maxLength": 80 },
+              "icon": { "$ref": "#/$defs/icon" },
+              "to": { "type": "string", "maxLength": 200, "pattern": "^(/[A-Za-z0-9_-][A-Za-z0-9_.-]*)+$" },
+              "section": { "$ref": "#/$defs/name" },
+              "order": { "type": "integer" }
+            }
+          }
+        },
+        "tile": { "type": "boolean" }
+      }
+    }
+  }
+}

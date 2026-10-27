@@ -4,7 +4,6 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import type { ServiceUiDefinition, RemoteModule } from './types'
 
 const fetchMock = vi.fn()
-vi.stubGlobal('fetch', fetchMock)
 
 const Page = defineComponent({ props: { who: String }, setup: (p) => () => h('p', { class: 'page' }, `page ${p.who ?? ''}`) })
 
@@ -40,8 +39,12 @@ async function fresh() {
 
 beforeEach(() => {
   fetchMock.mockReset()
+  vi.stubGlobal('fetch', fetchMock)
   vi.unstubAllEnvs()
   vi.stubEnv('VITE_DEV_USER', '')
+})
+afterEach(() => {
+  vi.unstubAllGlobals()
 })
 
 describe('defineServiceUi', () => {
@@ -62,18 +65,17 @@ describe('defineServiceUi', () => {
       ],
       slots: { provides: [{ slot: 'nodot', expose: './Card', props: 0 }], hosts: [{ slot: 'bad', props: 1.5 }] },
     })
-    const err = (() => {
-      try {
-        defineServiceUi(bad)
-      } catch (e) {
-        return (e as Error).message
-      }
-    })()
+    let err = ''
+    try {
+      defineServiceUi(bad)
+    } catch (e) {
+      err = (e as Error).message
+    }
     for (const fragment of [
       'service "Demo Service"',
       'views key "../escape"',
       'icon "fa-box"',
-      'launcher "/elsewhere" is outside',
+      'launcher "/elsewhere" must be a plain path under /demo',
       'id is used twice',
       'base "/demo" is used twice',
       'route "/abs" must be relative',
@@ -86,6 +88,57 @@ describe('defineServiceUi', () => {
     ]) {
       expect(err).toContain(fragment)
     }
+  })
+
+  it('holds the same patterns and limits as the manifest schema', async () => {
+    const { checkDefinition } = await fresh()
+    const d = def()
+    const tool = d.tools[0]!
+    tool.id = 'Bad Id'
+    tool.label = 'x'.repeat(81)
+    tool.description = 'x'.repeat(301)
+    tool.routes[0]!.path = ':id(.*)'
+    tool.routes[1]!.title = ''
+    tool.launcher![0]!.section = 'Analysis & Reporting'
+    const problems = checkDefinition(d).join('\n')
+    for (const fragment of [
+      'id "Bad Id" must be 1–63 lowercase letters',
+      'label must be 1–80 characters',
+      'description is over 300 characters',
+      'route ":id(.*)" may only use name and :param segments',
+      'route "open" title must be 1–80 characters',
+      'section "Analysis & Reporting" must be 1–63 lowercase letters',
+    ]) {
+      expect(problems).toContain(fragment)
+    }
+    expect(checkDefinition(def({ tools: [{ ...def().tools[0]!, routes: [{ path: ':owner/:repo', title: 'R', expose: './List', auth: 'none' }] }] }))).toEqual([])
+  })
+
+  it('rejects what the registry would: launcher escapes, bad repos, requires, duplicate providers', async () => {
+    const { checkDefinition } = await fresh()
+    const d = def({
+      slots: { provides: [{ slot: 'person.card', expose: './Card', props: 1 }, { slot: 'person.card', expose: './List', props: 1 }] },
+      requires: [{ service: 'Other', contract: 0 }],
+      feedback: { repo: 'x/..' },
+    })
+    d.tools[0]!.launcher = [
+      { label: 'Esc', icon: 'pi-box', to: '/demo/../admin', section: 'analysis', order: 1 },
+      { label: '', icon: 'pi-box', to: '/demo?x=1', section: 'analysis', order: 1.5 },
+    ]
+    const problems = checkDefinition(d).join('\n')
+    for (const fragment of [
+      'launcher "/demo/../admin" must be a plain path under /demo',
+      'launcher "/demo?x=1" must be a plain path under /demo',
+      'label must be 1–80 characters',
+      'order must be an integer',
+      'slot "person.card" props 1 is provided twice',
+      'required service "Other" must be',
+      'contract must be a positive integer',
+      'feedback repo "x/.." must be owner/repo',
+    ]) {
+      expect(problems).toContain(fragment)
+    }
+    expect(checkDefinition(def({ feedback: { repo: 'example/my.repo' } }))).toEqual([])
   })
 
   it('does not accept inherited keys as views', async () => {
@@ -208,8 +261,6 @@ describe('routes', () => {
     await router.push('/demo?x=1')
     expect(router.currentRoute.value.path).toBe('/demo/open')
     expect(assign).toHaveBeenCalledWith('/auth/login?returnTo=%2Fdemo%3Fx%3D1')
-    vi.unstubAllGlobals()
-    vi.stubGlobal('fetch', fetchMock)
   })
 })
 
@@ -235,9 +286,9 @@ describe('ServiceSlot', () => {
 
   it('renders matching providers with the host props, skipping other props versions', async () => {
     const { ServiceSlot, setSlotProviders } = await slotKit()
-    setSlotProviders(() => [
-      { service: 'directory', props: 1, load: async () => Page },
-      { service: 'old', props: 2, load: async () => defineComponent(() => () => h('b', 'v2')) },
+    setSlotProviders([
+      { slot: 'person.card', build: 'b1', service: 'directory', props: 1, load: async () => Page },
+      { slot: 'person.card', build: 'b1', service: 'old', props: 2, load: async () => defineComponent(() => () => h('b', 'v2')) },
     ])
     const w = host(ServiceSlot)
     await flushPromises()
@@ -250,7 +301,7 @@ describe('ServiceSlot', () => {
     const { ServiceSlot, setSlotProviders } = await slotKit()
     const w = host(ServiceSlot)
     expect(w.find('.fallback').exists()).toBe(true)
-    setSlotProviders(() => [{ service: 'directory', props: 1, load: async () => Page }])
+    setSlotProviders([{ slot: 'person.card', build: 'b1', service: 'directory', props: 1, load: async () => Page }])
     await flushPromises()
     expect(w.find('.page').exists()).toBe(true)
     expect(w.find('.fallback').exists()).toBe(false)
@@ -261,10 +312,10 @@ describe('ServiceSlot', () => {
     const Boom = defineComponent(() => () => {
       throw new Error('render boom')
     })
-    setSlotProviders(() => [
-      { service: 'down', props: 1, load: async () => Promise.reject(new TypeError('network')) },
-      { service: 'broken', props: 1, load: async () => Boom },
-      { service: 'directory', props: 1, load: async () => Page },
+    setSlotProviders([
+      { slot: 'person.card', build: 'b1', service: 'down', props: 1, load: async () => Promise.reject(new TypeError('network')) },
+      { slot: 'person.card', build: 'b1', service: 'broken', props: 1, load: async () => Boom },
+      { slot: 'person.card', build: 'b1', service: 'directory', props: 1, load: async () => Page },
     ])
     const w = host(ServiceSlot)
     await flushPromises()
@@ -276,9 +327,40 @@ describe('ServiceSlot', () => {
     )
   })
 
+  it('does not re-load a failed provider when a refresh changes nothing', async () => {
+    const { ServiceSlot, setSlotProviders } = await slotKit()
+    const load = vi.fn(async () => Promise.reject(new TypeError('network')))
+    const list = () => [{ slot: 'person.card', build: 'b1', service: 'down', props: 1, load }]
+    setSlotProviders(list())
+    const w = host(ServiceSlot)
+    await flushPromises()
+    await nextTick()
+    setSlotProviders(list()) // a registry refresh: new objects, same content
+    await flushPromises()
+    await nextTick()
+    expect(load).toHaveBeenCalledOnce()
+    expect(w.find('.fallback').exists()).toBe(true)
+  })
+
+  it('gives a redeployed provider a fresh try, with its new loader', async () => {
+    const { ServiceSlot, setSlotProviders } = await slotKit()
+    const broken = vi.fn(async () => Promise.reject(new TypeError('bad build')))
+    setSlotProviders([{ slot: 'person.card', service: 'people', build: 'b1', props: 1, load: broken }])
+    const w = host(ServiceSlot)
+    await flushPromises()
+    await nextTick()
+    expect(w.find('.fallback').exists()).toBe(true)
+    const fixed = vi.fn(async () => Page)
+    setSlotProviders([{ slot: 'person.card', service: 'people', build: 'b2', props: 1, load: fixed }])
+    await flushPromises()
+    await nextTick()
+    expect(fixed).toHaveBeenCalledOnce()
+    expect(w.find('.page').exists()).toBe(true)
+  })
+
   it('shows the fallback once every provider has failed', async () => {
     const { ServiceSlot, setSlotProviders } = await slotKit()
-    setSlotProviders(() => [{ service: 'down', props: 1, load: async () => Promise.reject(new TypeError('network')) }])
+    setSlotProviders([{ slot: 'person.card', build: 'b1', service: 'down', props: 1, load: async () => Promise.reject(new TypeError('network')) }])
     const w = host(ServiceSlot)
     expect(w.find('.fallback').exists()).toBe(false) // loading: no flash of the fallback
     await flushPromises()
@@ -318,8 +400,6 @@ describe('createStandaloneApp', () => {
 
   afterEach(() => {
     document.body.innerHTML = ''
-    vi.unstubAllGlobals()
-    vi.stubGlobal('fetch', fetchMock)
   })
 
   it('serves the API from this origin, redirects / to the first tool, and titles the tab', async () => {

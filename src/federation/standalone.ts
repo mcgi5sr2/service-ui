@@ -28,8 +28,6 @@ export interface StandaloneOptions {
   layout?: Component
   /** Where '/' goes. Default: the first tool's base. */
   home?: string
-  /** Rendered for unknown paths. */
-  notFound?: Component
 }
 
 const NotFound = defineComponent({
@@ -49,16 +47,16 @@ export function createStandaloneApp(
   const routes: RouteRecordRaw[] = [
     ...(home ? [{ path: '/', redirect: home }] : []),
     ...toolRoutes(def.tools, (expose) => () => loadView(def, expose)),
-    { path: '/:pathMatch(.*)*', component: options.notFound ?? NotFound, meta: { title: 'Not found' } },
+    { path: '/:pathMatch(.*)*', component: NotFound, meta: { title: 'Not found' } },
   ]
   const router = createRouter({ history: createWebHistory(), routes })
   router.beforeEach(requireSignIn(router))
   // After the navigation commits, so a redirecting guard can't leave the tab
   // claiming a page the user never reached. Page first: tabs truncate from the right.
   router.afterEach((to) => {
+    const page = to.meta.title
     const label = def.tools.find((t) => t.id === to.meta.tool)?.label
-    const parts = [to.meta.title, label].filter((s, i, all): s is string => !!s && all.indexOf(s) === i)
-    document.title = parts.join(' · ') || def.service
+    document.title = page && label && page !== label ? `${page} · ${label}` : page || label || def.service
   })
 
   const pinia = createPinia()

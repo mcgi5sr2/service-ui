@@ -14,7 +14,7 @@
  */
 import { computed, reactive, watch } from 'vue'
 import SlotProviderView from './SlotProviderView.vue'
-import { slotProviders } from './slots'
+import { slotProviders, type SlotProvider } from './slots'
 
 const p = withDefaults(
   defineProps<{ name: string; props?: Record<string, unknown>; version?: number }>(),
@@ -23,20 +23,26 @@ const p = withDefaults(
 
 const providers = computed(() => slotProviders(p.name).filter((x) => x.props === p.version))
 const failed = reactive(new Set<string>())
-// A new provider list (the registry refreshed, a service came back) gets a fresh chance.
-watch(providers, () => failed.clear())
+// One identity per provider build: a redeploy is a new provider with a fresh try
+// (and a fresh SlotProviderView, so its new `load` is used); a registry refresh
+// that changes nothing doesn't re-load providers that already failed.
+const id = (x: SlotProvider) => `${x.service}@${x.build}`
+watch(
+  () => providers.value.map(id).join('|'),
+  () => failed.clear(),
+)
 
-const empty = computed(() => providers.value.every((x) => failed.has(x.service)))
+const empty = computed(() => providers.value.every((x) => failed.has(id(x))))
 </script>
 
 <template>
-  <template v-for="provider in providers" :key="provider.service">
+  <template v-for="provider in providers" :key="id(provider)">
     <SlotProviderView
-      v-if="!failed.has(provider.service)"
+      v-if="!failed.has(id(provider))"
       :name="name"
       :provider="provider"
       :data="p.props"
-      @failed="failed.add(provider.service)"
+      @failed="failed.add(id(provider))"
     />
   </template>
   <slot v-if="empty" />

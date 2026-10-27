@@ -48,12 +48,13 @@ export function isUnknown(err: unknown): boolean {
 const bases = new Map<string, string>()
 
 // '' or plain path segments: no scheme, no '//' or '\\' (browsers read both as a new
-// host), no dot segments, no encoding tricks, no trailing slash.
+// host), no encoding tricks, no trailing slash — and no dot segments, because a
+// segment can't start with '.'.
 const BASE_RE = /^(?:\/[A-Za-z0-9_~-][A-Za-z0-9._~-]*)*$/
 
 /** Record where `service`'s API lives: '' (same origin, at the root) or a path like /svc/name. */
 export function setApiBase(service: string, base: string): void {
-  if (!BASE_RE.test(base) || /(^|\/)\.\.?(\/|$)/.test(base)) {
+  if (!BASE_RE.test(base)) {
     throw new Error(`service-ui: API base for "${service}" must be '' or a path like /svc/name, got "${base}"`)
   }
   const existing = bases.get(service)
