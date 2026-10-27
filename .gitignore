@@ -1,0 +1,3 @@
+node_modules/
+# Library package: consumers resolve their own versions, so don't pin ours.
+package-lock.json

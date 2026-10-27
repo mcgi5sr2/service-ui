@@ -1,0 +1,99 @@
+/* ============================================================================
+   service-ui reset — opt-in, for app views:
+
+     import 'service-ui/reset.css'
+
+   Tailwind is leaving the fleet, and its "preflight" reset goes with it. Views
+   converted from Tailwind were written against preflight's behaviour, so this
+   file reproduces the parts they lean on. Kit components don't need it: each one
+   styles its own elements fully.
+
+   Everything is wrapped in :where() (zero specificity) inside the service-ui
+   layer, so any rule an app writes — layered or not — overrides it.
+   ========================================================================== */
+@layer service-ui {
+  :where(*, ::before, ::after) {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    /* Zero-width solid borders: setting just a width (border-bottom-width: 1px)
+       draws a line, as it did under preflight. */
+    border: 0 solid;
+  }
+
+  :where(html) {
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+    tab-size: 4;
+  }
+
+  :where(h1, h2, h3, h4, h5, h6) {
+    font-size: inherit;
+    font-weight: inherit;
+  }
+
+  :where(a) {
+    color: inherit;
+    text-decoration: inherit;
+  }
+
+  :where(b, strong) {
+    font-weight: bolder;
+  }
+
+  :where(code, kbd, samp, pre) {
+    font-family: var(--fm);
+    font-size: 1em;
+  }
+
+  :where(table) {
+    border-collapse: collapse;
+    text-indent: 0;
+    border-color: inherit;
+  }
+
+  :where(ol, ul, menu) {
+    list-style: none;
+  }
+
+  :where(img, svg, video, canvas, audio, iframe, embed, object) {
+    display: block;
+    vertical-align: middle;
+  }
+
+  :where(img, video) {
+    max-width: 100%;
+    height: auto;
+  }
+
+  :where(button, input, select, optgroup, textarea),
+  :where(::file-selector-button) {
+    font: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    background-color: transparent;
+    border-radius: 0;
+    opacity: 1;
+  }
+
+  :where(button, [role='button']) {
+    cursor: pointer;
+  }
+
+  :where(:disabled) {
+    cursor: default;
+  }
+
+  :where(textarea) {
+    resize: vertical;
+  }
+
+  :where(::placeholder) {
+    opacity: 1;
+    color: var(--faint);
+  }
+
+  :where([hidden]:not([hidden='until-found'])) {
+    display: none !important;
+  }
+}

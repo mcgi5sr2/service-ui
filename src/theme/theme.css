@@ -1,0 +1,148 @@
+/* ============================================================================
+   service-ui theme tokens.
+
+   Plain CSS — no framework. Import once from the app entry:
+
+     import 'service-ui/theme.css'
+
+   Raw semantic custom properties, switched at runtime by attributes the theme
+   store writes on <html>: [data-theme] (light/dark), [data-accent] (violet,
+   cobalt, teal, amber) and the .tide class (glass skin). Components read them
+   directly: var(--surface), var(--accent), var(--radius-card), …
+   ========================================================================== */
+
+:root {
+  /* light (default) — single-tone white ground: canvas matches the card surface, so the
+     app reads as one plane. Cards/bands are set apart by border + shadow, not a tan step. */
+  --bg: #ffffff; --surface: #ffffff; --surface-2: #fafaf8; --sidebar: #fcfcfa;
+  --border: rgba(20, 22, 26, .1); --border-2: rgba(20, 22, 26, .06); --border-strong: rgba(20, 22, 26, .18);
+  --ink: #191c21; --muted: #5b616b; --faint: #8a909a;
+  --accent: #6d45e0; --accent-ink: #ffffff; --accent-tint: rgba(109, 69, 224, .1); /* violet = default */
+  --ok: #12924b; --warn: #c98a2e; --err: #d5322b; --unknown: #6d45e0;
+  --ok-t: rgba(18, 146, 75, .11); --warn-t: rgba(201, 138, 46, .14); --err-t: rgba(213, 50, 43, .11);
+  /* Comparison series: deliberately NOT the accent, so a comparison never reads as the
+     live series. */
+  --cmp-1: #6E82B0; --cmp-2: #3AA391;
+  --grid: rgba(20, 22, 26, .055);
+  --shadow-sm: 0 1px 2px rgba(20, 22, 26, .05);
+  --shadow: 0 1px 2px rgba(20, 22, 26, .05), 0 12px 28px -14px rgba(20, 22, 26, .16);
+  --shadow-lg: 0 24px 60px -20px rgba(20, 22, 26, .32);
+  --fs: 'Source Sans Pro', system-ui, sans-serif;
+  --fm: 'IBM Plex Mono', ui-monospace, monospace;
+  --radius-ctl: 8px; --radius-card: 12px; --radius-hero: 14px;
+}
+
+[data-theme='dark'] {
+  --bg: #0d1015; --surface: #151a21; --surface-2: #1a1f27; --sidebar: #11151b;
+  --border: rgba(255, 255, 255, .09); --border-2: rgba(255, 255, 255, .05); --border-strong: rgba(255, 255, 255, .18);
+  --ink: #e7e9ec; --muted: #9aa1ac; --faint: #69707b; --accent-ink: #0d1015;
+  --accent: #a98bff; --accent-tint: rgba(169, 139, 255, .16);
+  --ok: #38c978; --warn: #e29b41; --err: #f26761; --unknown: #9e86ff;
+  --ok-t: rgba(56, 201, 120, .14); --warn-t: rgba(226, 155, 65, .16); --err-t: rgba(242, 103, 97, .14);
+  --cmp-1: #8CA0D8; --cmp-2: #5CC6B6;
+  --grid: rgba(255, 255, 255, .05);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 18px 40px -18px rgba(0, 0, 0, .7);
+  --shadow-lg: 0 30px 70px -20px rgba(0, 0, 0, .8);
+}
+
+/* Accent options. Violet is baked into the base tokens above; these override
+   --accent / --accent-tint / --unknown for the other choices, with a lighter
+   variant under dark. */
+[data-accent='cobalt'] { --accent: #2b55e0; --accent-tint: rgba(43, 85, 224, .1); --unknown: #2b55e0; }
+[data-theme='dark'][data-accent='cobalt'] { --accent: #7a9bff; --accent-tint: rgba(122, 155, 255, .16); --unknown: #7a9bff; }
+
+[data-accent='teal'] { --accent: #0e8f84; --accent-tint: rgba(14, 143, 132, .1); --unknown: #0e8f84; }
+[data-theme='dark'][data-accent='teal'] { --accent: #3fc7ba; --accent-tint: rgba(63, 199, 186, .16); --unknown: #3fc7ba; }
+
+[data-accent='amber'] { --accent: #b0701a; --accent-tint: rgba(176, 112, 26, .1); --unknown: #b0701a; }
+[data-theme='dark'][data-accent='amber'] { --accent: #e6a44b; --accent-tint: rgba(230, 164, 75, .16); --unknown: #e6a44b; }
+
+/* Kit rules live in the service-ui layer so an app's own rules always win. */
+@layer service-ui {
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--fs);
+  }
+
+  /* A bare <button>: no browser chrome, inherits text styling. Kit components put
+     it on their text-like buttons and add their own look on top (a component's
+     scoped selector is more specific, so it wins within the layer). It doesn't
+     depend on any reset being present. */
+  .sui-plain-btn {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    color: inherit;
+    cursor: pointer;
+  }
+}
+
+/* Accessibility: honour reduced-motion by collapsing all animation/transition. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ==========================================================================
+   "Tide" glass skin — toggled via `.tide` on <html> (theme store `skin`),
+   opt-in and default-off. A fixed full-viewport gradient behind the app shell,
+   translucent frosted surfaces.
+   ========================================================================== */
+.tide {
+  --bg: #eaf3f0;
+  --surface: rgba(255, 255, 255, .58); --surface-2: rgba(255, 255, 255, .42); --sidebar: rgba(255, 255, 255, .7);
+  --ink: #1e3a3f; --muted: #4c6e72; --faint: #7c9ca0;
+  /* Accent is left to the [data-accent] picker so it keeps working in Tide. */
+  /* Only --ok/--err are softened for glass; --warn already matches the base token. */
+  --ok: #2f9d6b; --err: #d1554a;
+  --ok-t: rgba(47, 157, 107, .13); --err-t: rgba(209, 85, 74, .12);
+  --border: rgba(30, 58, 63, .14); --border-2: rgba(30, 58, 63, .08); --border-strong: rgba(30, 58, 63, .24);
+  --grid: rgba(30, 58, 63, .05);
+  --shadow-sm: 0 1px 2px rgba(30, 58, 63, .06);
+  --shadow: 0 1px 2px rgba(30, 58, 63, .06), 0 16px 34px -16px rgba(30, 58, 63, .16);
+  --shadow-lg: 0 24px 60px -20px rgba(30, 58, 63, .22);
+  --fs: 'DM Sans', system-ui, sans-serif;
+}
+/* The gradient rides on the app shell's root element (class `app-shell`) so it fills the
+   whole viewport, behind the frosted top bar and content alike. Fixed so it holds while
+   scrolling. --bg stays opaque, so sticky navs / inputs that mask with bg-canvas still work. */
+.tide .app-shell {
+  background: radial-gradient(130% 130% at 0% 0%, #cfede3 0%, #bfe0ea 46%, #d6d3f0 100%) fixed;
+}
+/* Frost the translucent glass surfaces — they blur the gradient behind them. Components
+   (and apps) mark a glass surface with the `glass` class. */
+.tide .glass {
+  backdrop-filter: blur(16px) saturate(1.15);
+  -webkit-backdrop-filter: blur(16px) saturate(1.15);
+}
+/* DARK: rough placeholder only — dark glass still needs its own design. */
+.tide[data-theme='dark'] {
+  --bg: #0c1416;
+  --surface: rgba(22, 34, 38, .55); --surface-2: rgba(22, 34, 38, .42); --sidebar: rgba(22, 34, 38, .7);
+  --ink: #e6efef; --muted: #9fb6b8; --faint: #6f8a8c;
+  --border: rgba(255, 255, 255, .12); --border-2: rgba(255, 255, 255, .06); --border-strong: rgba(255, 255, 255, .24);
+}
+/* Fallback where backdrop-filter is unsupported: near-opaque surfaces so the translucent
+   glass panels stay legible instead of see-through. After the dark block above, which it
+   must override (same specificity, so order decides). */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .tide {
+    --surface: rgba(255, 255, 255, .92); --surface-2: rgba(255, 255, 255, .88); --sidebar: rgba(255, 255, 255, .95);
+  }
+  .tide[data-theme='dark'] {
+    --surface: rgba(22, 34, 38, .93); --surface-2: rgba(22, 34, 38, .9); --sidebar: rgba(22, 34, 38, .96);
+  }
+}
+.tide[data-theme='dark'] .app-shell {
+  background: radial-gradient(130% 130% at 0% 0%, #10312e 0%, #0f2a33 46%, #1b1f38 100%) fixed;
+}
