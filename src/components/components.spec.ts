@@ -181,8 +181,9 @@ describe('tone maps', () => {
  * — keyframes excepted, since they aren't style rules.
  */
 describe('component styles', () => {
-  const dir = import.meta.dirname
-  const files = readdirSync(dir).filter((f) => f.endsWith('.vue'))
+  // Every SFC in the kit, not just this folder.
+  const dir = join(import.meta.dirname, '..')
+  const files = readdirSync(dir, { recursive: true, encoding: 'utf8' }).filter((f) => f.endsWith('.vue'))
 
   it.each(files)('%s keeps its rules scoped and inside @layer service-ui', (file) => {
     const { descriptor } = parse(readFileSync(join(dir, file), 'utf8'), { filename: file })

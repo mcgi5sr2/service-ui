@@ -28,3 +28,30 @@ export { default as UserAvatar } from './components/UserAvatar.vue'
 export { default as WarnState } from './components/WarnState.vue'
 export { toneColor, toneTint } from './components/tone'
 export type { Tone, Column, SegmentOption } from './components/types'
+
+export { defineServiceUi, checkDefinition } from './federation/define'
+export { defineRemote, loadView } from './federation/remote'
+export { loadRemote } from './federation/loader'
+export type { RemoteService } from './federation/loader'
+export { toolRoutes, requireSignIn } from './federation/routes'
+export { setSlotProviders, slotProviders } from './federation/slots'
+export type { SlotProvider, SlotResolver } from './federation/slots'
+export { useServiceUi } from './federation/context'
+export { default as ServiceSlot } from './federation/ServiceSlot.vue'
+export { default as StandaloneLayout } from './federation/StandaloneLayout.vue'
+export { CONTRACT } from './federation/types'
+export type {
+  Listed,
+  RouteAuth,
+  ToolRoute,
+  LauncherEntry,
+  Tool,
+  SlotProvide,
+  SlotHost,
+  Requirement,
+  ServiceUiFields,
+  ServiceUiDefinition,
+  ViewLoader,
+  Manifest,
+  RemoteModule,
+} from './federation/types'
