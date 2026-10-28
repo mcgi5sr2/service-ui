@@ -135,6 +135,7 @@ function buildQuery(query?: Record<string, QueryValue>): string {
  *   const api = createClient('my-service')
  *   api.get<Foo[]>('/api/foo')                       // parsed JSON, throws ApiError
  *   api.get<Foo[]>('/api/foo', { query: { q } })
+ *   api.url('/api/foo/export.csv')                   // for an <a href> download
  *
  * The session cookie is the only credential, and same-origin fetches send it on
  * their own — there is no token to attach. `req` throws {@link ApiError} on any
@@ -200,6 +201,10 @@ export function createClient(service: string) {
     // Raw text GET — downloads/exports, where the body is a file, not JSON to parse.
     // Same error handling as everything else.
     text: (path: string, options?: RequestOptions) => raw('GET', path, undefined, options).then((r) => r.text()),
+    // The same-origin URL of one of the service's routes, for what the browser
+    // fetches itself: a download link (`<a :href>`), an <img>. Same base and the
+    // same origin/escape checks as a request.
+    url: (path: string, options?: Pick<RequestOptions, 'query'>) => resolve(service, path, buildQuery(options?.query)),
   }
 }
 

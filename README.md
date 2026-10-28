@@ -101,7 +101,8 @@ const api = createClient('my-service')
 const { data, error, loading } = useResource((signal) => api.get<Thing[]>('/api/things', { signal }))
 ```
 
-Paths are the backend's own routes. The wrapper records where the backend is — the origin root standalone,
+For what the browser fetches itself — a download link, an image — `api.url('/api/things/export.csv')` gives
+the same-origin URL with the same checks. Paths are the backend's own routes. The wrapper records where the backend is — the origin root standalone,
 `/svc/<name>` in a shell — so a page never hard-codes a prefix. `ApiError.status` 0 (or 502/503/504) means "could not
 tell", never "empty": render it with `WarnState` (`isUnknown(err)`).
 

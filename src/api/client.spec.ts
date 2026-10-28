@@ -137,6 +137,21 @@ describe('createClient', () => {
     await expect(createClient('svc').del('/api/x/1')).resolves.toBeUndefined()
   })
 
+  it('builds download URLs from the same base and query rules, without a request', () => {
+    expect(createClient('svc').url('/api/x/export.csv', { query: { a: 1, b: '' } })).toBe('/svc/svc/api/x/export.csv?a=1')
+    setApiBase('alone', '')
+    expect(createClient('alone').url('/api/x')).toBe('/api/x')
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('refuses a download URL that escapes the service, like a request', () => {
+    setApiBase('root', '')
+    expect(() => createClient('root').url('//evil.example/x')).toThrow(/escapes/)
+    expect(() => createClient('svc').url('/%2e%2e/other/api')).toThrow(/escapes/)
+    expect(() => createClient('svc').url('api/x')).toThrow(/must start with/)
+    expect(() => createClient('nobody').url('/api/x')).toThrow(/no API base registered/)
+  })
+
   it('passes an abort signal through', async () => {
     fetchMock.mockResolvedValue(mockResponse({ ok: true, status: 200, body: '{}' }))
     const ctrl = new AbortController()
